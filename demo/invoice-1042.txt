@@ -1,0 +1,7 @@
+Invoice #1042
+Customer: Bluebird Home
+Issue Date: 2026-03-12
+Due Date: 2026-03-26
+Amount Due: $4,860
+Status: Unpaid
+Notes: Net 14. Reminder not yet sent.

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Inbox to Ops Brief</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Daily operator for a small business owner</p>
+          <h1>Inbox to Ops Brief</h1>
+        </div>
+        <div class="topbar-meta">
+          <div>
+            <p class="meta-label">Brief date</p>
+            <p id="brief-date" class="meta-value"></p>
+          </div>
+          <div>
+            <p class="meta-label">Compile status</p>
+            <p id="pipeline-status" class="meta-value">Waiting for inputs</p>
+          </div>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="intake-rail panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-kicker">Intake</p>
+              <h2>Messy business inputs</h2>
+            </div>
+            <button id="load-demo-button" class="button button-ghost" type="button">
+              Load demo set
+            </button>
+          </div>
+
+          <label class="dropzone" for="file-input">
+            <input id="file-input" type="file" multiple />
+            <span class="dropzone-label">Drop in emails, invoices, notes, or docs</span>
+            <span class="dropzone-copy">Text files work best for the prototype. PDFs can still be queued for reference.</span>
+          </label>
+
+          <div class="action-row">
+            <button id="compile-button" class="button button-primary" type="button" disabled>
+              Compile business state
+            </button>
+            <button id="clear-button" class="button button-muted" type="button" disabled>
+              Clear
+            </button>
+          </div>
+
+          <div class="pipeline">
+            <div class="pipeline-head">
+              <p class="section-kicker">Compiler</p>
+              <p id="pipeline-stage-copy">Ingest raw files into a usable company state.</p>
+            </div>
+            <div id="pipeline-steps" class="pipeline-steps"></div>
+          </div>
+
+          <div class="memory-summary">
+            <div class="panel-head compact">
+              <div>
+                <p class="section-kicker">Compiled memory</p>
+                <h3>State snapshot</h3>
+              </div>
+            </div>
+            <div id="memory-metrics" class="metric-grid"></div>
+          </div>
+
+          <div class="source-list-wrap">
+            <div class="panel-head compact">
+              <div>
+                <p class="section-kicker">Files queued</p>
+                <h3 id="document-count">0 sources</h3>
+              </div>
+            </div>
+            <div id="source-list" class="source-list empty-state">
+              Add a few inputs to compile the first brief.
+            </div>
+          </div>
+        </section>
+
+        <section class="brief-stage panel">
+          <div class="brief-head">
+            <div>
+              <p class="section-kicker">Daily brief</p>
+              <h2>What needs attention today</h2>
+            </div>
+            <p id="brief-summary" class="brief-summary">
+              No brief compiled yet.
+            </p>
+          </div>
+
+          <div id="brief-grid" class="brief-grid">
+            <article class="brief-card placeholder-card">
+              <h3>Ops</h3>
+              <p>Compile a few documents to surface open issues, obligations, and recommended next steps.</p>
+            </article>
+            <article class="brief-card placeholder-card">
+              <h3>Finance</h3>
+              <p>Overdue invoices and cash reminders land here with exact due dates and amounts.</p>
+            </article>
+            <article class="brief-card placeholder-card">
+              <h3>Customer comms</h3>
+              <p>Reply drafts stay grounded in the underlying evidence instead of generic AI copy.</p>
+            </article>
+            <article class="brief-card placeholder-card">
+              <h3>Risks</h3>
+              <p>Trust, launch, and cash exposure stay visible with the source facts attached.</p>
+            </article>
+          </div>
+        </section>
+
+        <aside class="receipts-rail panel">
+          <div class="panel-head">
+            <div>
+              <p class="section-kicker">Audit trail</p>
+              <h2>Why this was recommended</h2>
+            </div>
+          </div>
+
+          <div id="focus-panel" class="focus-panel empty-state">
+            Select a brief item to inspect the exact evidence behind it.
+          </div>
+
+          <div class="receipt-columns">
+            <section class="receipt-section">
+              <div class="receipt-head">
+                <h3>Files read</h3>
+                <span id="files-read-count" class="receipt-count">0</span>
+              </div>
+              <div id="files-read" class="receipt-list"></div>
+            </section>
+
+            <section class="receipt-section">
+              <div class="receipt-head">
+                <h3>Facts extracted</h3>
+                <span id="facts-count" class="receipt-count">0</span>
+              </div>
+              <div id="facts-list" class="receipt-list"></div>
+            </section>
+
+            <section class="receipt-section">
+              <div class="receipt-head">
+                <h3>Drafts created</h3>
+                <span id="drafts-count" class="receipt-count">0</span>
+              </div>
+              <div id="drafts-list" class="receipt-list"></div>
+            </section>
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
