@@ -14,6 +14,22 @@ Safe areas for ingestion work:
 
 Avoid changing future agent/orchestrator or frontend work from here.
 
+## LLM Fallback
+
+Live-input parsing can use an OpenAI structured-output fallback when the deterministic parser does not extract enough signal from a document. The fixed demo bundle remains deterministic.
+
+Set up a local key:
+
+```bash
+cd /Users/dhruvverma/Documents/Projects/A1-codex
+cp .env.local.example .env.local
+```
+
+Then edit [`/Users/dhruvverma/Documents/Projects/A1-codex/.env.local`](/Users/dhruvverma/Documents/Projects/A1-codex/.env.local) and set:
+
+- `OPENAI_API_KEY`
+- `OPENAI_MODEL` such as `gpt-4o-mini`
+
 ## Contract Rules
 
 The top-level `business_state` keys are frozen for downstream teammates:

@@ -1,8 +1,10 @@
+import importlib
 import json
 import sys
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest.mock import patch
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -14,6 +16,7 @@ from backend.ingestion.build_business_state import (
     build_business_state,
     create_source_document,
     infer_source_type,
+    needs_llm_fallback,
 )
 from backend.ingestion.parse_email import parse_email
 from backend.ingestion.parse_invoice import parse_invoice
@@ -21,6 +24,7 @@ from backend.ingestion.parse_note import parse_note
 
 
 DEMO_DIR = ROOT / "backend" / "data" / "demo_inputs"
+BUILD_BUSINESS_STATE_MODULE = importlib.import_module("backend.ingestion.build_business_state")
 
 
 class ParseEmailTests(unittest.TestCase):
@@ -58,6 +62,22 @@ class ParseEmailTests(unittest.TestCase):
         unknown_fields = {item["field_name"] for item in result["unknowns"]}
         self.assertEqual(unknown_fields, {"date", "company_name", "contact_email"})
         self.assertEqual(result["source_map"]["email_missing_headers"]["title"], "Follow up")
+
+    def test_parse_email_flags_eta_only_follow_up_as_open_issue(self) -> None:
+        text = (
+            "From: Maya Patel <maya@acme-retail.com>\n"
+            "Subject: Shipment update\n"
+            "Received: 2026-04-07\n\n"
+            "We still do not have a realistic ETA for PO-7781."
+        )
+
+        result = parse_email(
+            source_id="email_eta_followup",
+            title="Shipment update",
+            text=text,
+        )
+
+        self.assertEqual(result["open_issues"][0]["issue_type"], "shipment_delay")
 
 
 class ParseInvoiceTests(unittest.TestCase):
@@ -209,6 +229,69 @@ class BuildBusinessStateTests(unittest.TestCase):
             ),
             "note",
         )
+
+    def test_needs_llm_fallback_when_note_has_no_structured_commitments(self) -> None:
+        source = SourceDocument(
+            source_id="note_unstructured",
+            source_type="note",
+            title="Scanned ops memo",
+            text="This is a messy operating memo without bullets.",
+        )
+        parsed = parse_note(source.source_id, source.title, source.text)
+        self.assertTrue(needs_llm_fallback(source, parsed))
+
+    def test_build_business_state_uses_llm_fallback_for_weak_parse_when_enabled(self) -> None:
+        source = SourceDocument(
+            source_id="note_unstructured",
+            source_type="note",
+            title="Scanned ops memo",
+            text="This is a messy operating memo without bullets.",
+        )
+        llm_state = {
+            "customers": [],
+            "invoices": [],
+            "open_issues": [],
+            "commitments": [
+                {
+                    "source_id": "note_unstructured",
+                    "commitment": "Call supplier before noon.",
+                    "trigger": "If shipment status is unclear",
+                    "due_hint": "before noon",
+                }
+            ],
+            "sops": [
+                {
+                    "source_id": "note_unstructured",
+                    "title": "Scanned ops memo",
+                    "summary": "Call supplier before noon if shipment status is unclear.",
+                }
+            ],
+            "events": [],
+            "unknowns": [],
+            "source_map": {
+                "note_unstructured": {
+                    "source_type": "note",
+                    "title": "Scanned ops memo",
+                    "snippet": "Call supplier before noon if shipment status is unclear.",
+                    "date": None,
+                }
+            },
+        }
+
+        with patch.object(BUILD_BUSINESS_STATE_MODULE, "llm_parser_configured", return_value=True), patch.object(
+            BUILD_BUSINESS_STATE_MODULE,
+            "parse_document_with_llm",
+            return_value=llm_state,
+        ) as parse_with_llm:
+            result = build_business_state(
+                [source],
+                reference_date=date(2026, 4, 7),
+                allow_llm_fallback=True,
+            )
+
+        self.assertEqual(result["commitments"], llm_state["commitments"])
+        self.assertEqual(result["sops"], llm_state["sops"])
+        parse_with_llm.assert_called_once()
 
 
 if __name__ == "__main__":

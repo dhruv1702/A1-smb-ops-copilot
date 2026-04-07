@@ -143,6 +143,58 @@ def run_inbox_agent(business_state: dict[str, Any]) -> dict[str, Any]:
                 }
             )
 
+    if not ops:
+        for issue in _fallback_issue_records(business_state):
+            source_document = {
+                "id": issue["source_id"],
+                "name": issue["source_name"],
+            }
+            issue_receipt = register_receipt(
+                receipts,
+                source_document=source_document,
+                title="Customer is waiting on a shipment update",
+                excerpt=issue["excerpt"],
+                receipt_type=issue["source_type"],
+            )
+            receipt_ids = [
+                receipt["id"]
+                for receipt in (
+                    issue_receipt,
+                    rules["same_day_update"],
+                    rules["partial_ship"],
+                    rules["supplier_escalation"],
+                    rules["sensitive_account"],
+                )
+                if receipt
+            ]
+            ops_id = f"inbox-waiting-{slugify(issue['company_name'])}"
+            ops.append(
+                {
+                    "id": ops_id,
+                    "title": f"{issue['company_name']} is waiting on an update",
+                    "summary": issue["summary"],
+                    "priority": 1,
+                    "receipt_ids": receipt_ids,
+                    "owner": "ops",
+                    "due": "today",
+                    "source_agents": ["inbox_agent"],
+                    "status": "open",
+                }
+            )
+            recommended_actions.append(
+                {
+                    "id": f"action-{ops_id}",
+                    "title": f"Send {issue['company_name']} a factual shipment update today",
+                    "summary": "Confirm revised timing, avoid vague language, and include the partial-ship option if inventory is split.",
+                    "priority": 1,
+                    "receipt_ids": receipt_ids,
+                    "owner": "ops",
+                    "due": "today",
+                    "source_agents": ["inbox_agent"],
+                    "status": "pending_review",
+                }
+            )
+
     return {
         "agent": "inbox_agent",
         "executive_summary": [
@@ -174,3 +226,26 @@ def _customer_index(business_state: dict[str, Any]) -> dict[str, dict[str, Any]]
                 "contact_name": customer.get("contact_name"),
             }
     return index
+
+
+def _fallback_issue_records(business_state: dict[str, Any]) -> list[dict[str, str]]:
+    records: list[dict[str, str]] = []
+    for issue in business_state.get("open_issues", []):
+        if not isinstance(issue, dict):
+            continue
+        issue_type = str(issue.get("issue_type") or "")
+        if issue_type not in {"shipment_delay", "customer_follow_up", "customer_complaint"}:
+            continue
+        source_id = str(issue.get("source_id") or "")
+        source_entry = source_map_entry(business_state, source_id)
+        records.append(
+            {
+                "source_id": source_id,
+                "source_name": str(source_entry.get("title") or source_id),
+                "source_type": str(source_entry.get("source_type") or "email"),
+                "company_name": str(issue.get("company_name") or "Customer"),
+                "summary": str(issue.get("summary") or "Customer is waiting on an update."),
+                "excerpt": str(source_entry.get("snippet") or issue.get("summary") or "Customer is waiting on an update."),
+            }
+        )
+    return records

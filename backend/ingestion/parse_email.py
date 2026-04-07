@@ -152,6 +152,8 @@ def _looks_like_company(value: str) -> bool:
 
 def _detect_issue_type(body: str) -> Optional[str]:
     lowered = body.lower()
+    if "eta" in lowered and any(token in lowered for token in ("waiting", "realistic", "still do not have", "update")):
+        return "shipment_delay"
     if any(token in lowered for token in ("shipment", "delivery")) and any(
         token in lowered for token in ("slip", "delay", "update", "eta")
     ):

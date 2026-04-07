@@ -136,6 +136,92 @@ def run_customer_relations_agent(business_state: dict[str, Any]) -> dict[str, An
             }
         )
 
+    if not customer_comms:
+        for issue in _fallback_issue_records(business_state):
+            source_document = {
+                "id": issue["source_id"],
+                "name": issue["source_name"],
+            }
+            issue_receipt = register_receipt(
+                receipts,
+                source_document=source_document,
+                title="Customer wants a plain update today",
+                excerpt=issue["excerpt"],
+                receipt_type=issue["source_type"],
+            )
+            receipt_ids = [
+                receipt["id"]
+                for receipt in (
+                    issue_receipt,
+                    rules["same_day_update"],
+                    rules["partial_ship"],
+                    rules["sensitive_account"],
+                )
+                if receipt
+            ]
+            comms_id = f"comms-{slugify(issue['company_name'])}-shipment"
+            customer_comms.append(
+                {
+                    "id": comms_id,
+                    "title": f"Prepare a trust-rebuilding update for {issue['company_name']}",
+                    "summary": "Use direct language, provide a firm ETA, and explicitly address the partial-ship fallback.",
+                    "priority": 1,
+                    "receipt_ids": receipt_ids,
+                    "owner": "customer_success",
+                    "due": "today",
+                    "source_agents": ["customer_relations_agent"],
+                    "status": "ready_for_review",
+                }
+            )
+            risks.append(
+                {
+                    "id": f"risk-churn-{slugify(issue['company_name'])}",
+                    "title": f"{issue['company_name']} is at escalation risk",
+                    "summary": "The customer is already waiting for a direct update and needs a clear date, not a vague promise.",
+                    "priority": 1,
+                    "receipt_ids": receipt_ids,
+                    "owner": "customer_success",
+                    "due": "today",
+                    "source_agents": ["customer_relations_agent"],
+                    "status": "open",
+                }
+            )
+            recommended_actions.append(
+                {
+                    "id": f"action-{comms_id}",
+                    "title": f"Review and send customer update to {issue['company_name']}",
+                    "summary": "Send a same-day response with a real date, not a soft promise.",
+                    "priority": 1,
+                    "receipt_ids": receipt_ids,
+                    "owner": "customer_success",
+                    "due": "today",
+                    "source_agents": ["customer_relations_agent"],
+                    "status": "pending_review",
+                }
+            )
+            drafts.append(
+                {
+                    "id": f"draft-{slugify(issue['company_name'])}-shipment",
+                    "channel": "email",
+                    "subject": "Shipment update and next steps",
+                    "body": "\n".join(
+                        [
+                            f"Hi {issue['contact_first_name']},",
+                            "",
+                            "You are right to ask for a direct update.",
+                            "We are confirming the revised timing now and will send you a firm ETA today.",
+                            "If the full order cannot move together, we will confirm whether a partial shipment can go first.",
+                            "",
+                            "Best,",
+                            "Operations",
+                        ]
+                    ),
+                    "tone": "direct, accountable, date-specific",
+                    "related_action_id": f"action-{comms_id}",
+                    "receipt_ids": receipt_ids,
+                }
+            )
+
     return {
         "agent": "customer_relations_agent",
         "executive_summary": [
@@ -167,3 +253,29 @@ def _customer_index(business_state: dict[str, Any]) -> dict[str, dict[str, Any]]
                 "contact_name": customer.get("contact_name"),
             }
     return index
+
+
+def _fallback_issue_records(business_state: dict[str, Any]) -> list[dict[str, str]]:
+    customers_by_source = _customer_index(business_state)
+    records: list[dict[str, str]] = []
+    for issue in business_state.get("open_issues", []):
+        if not isinstance(issue, dict):
+            continue
+        issue_type = str(issue.get("issue_type") or "")
+        if issue_type not in {"shipment_delay", "customer_follow_up", "customer_complaint"}:
+            continue
+        source_id = str(issue.get("source_id") or "")
+        source_entry = source_map_entry(business_state, source_id)
+        customer_entry = customers_by_source.get(source_id, {})
+        contact_name = str(customer_entry.get("contact_name") or issue.get("company_name") or "Customer")
+        records.append(
+            {
+                "source_id": source_id,
+                "source_name": str(source_entry.get("title") or source_id),
+                "source_type": str(source_entry.get("source_type") or "email"),
+                "company_name": str(issue.get("company_name") or "Customer"),
+                "contact_first_name": contact_name.split(" ")[0],
+                "excerpt": str(source_entry.get("snippet") or issue.get("summary") or "Customer needs an update."),
+            }
+        )
+    return records

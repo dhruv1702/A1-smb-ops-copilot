@@ -77,6 +77,21 @@ Frontend intake modes:
 
 - `GET /api/daily-brief` rebuilds the fixed demo brief from the backend demo fixtures.
 - `POST /api/daily-brief` accepts uploaded text files, pasted text, and voice transcript text, then runs the Python ingestion + agent pipeline on those live inputs.
+- Live input parsing stays deterministic first, then falls back to an OpenAI structured-output parser when the initial extraction is too weak to be useful.
+
+LLM setup for broad document parsing:
+
+```bash
+cd /Users/dhruvverma/Documents/Projects/A1-codex
+cp .env.local.example .env.local
+```
+
+Then paste your key into [`/Users/dhruvverma/Documents/Projects/A1-codex/.env.local`](/Users/dhruvverma/Documents/Projects/A1-codex/.env.local):
+
+```bash
+OPENAI_API_KEY=your_real_key
+OPENAI_MODEL=gpt-4o-mini
+```
 
 ## Notes
 

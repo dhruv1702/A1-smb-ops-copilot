@@ -51,6 +51,7 @@ def build_daily_brief_from_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
     business_state = build_business_state(
         sources,
         reference_date=parse_reference_date(payload.get("reference_date")),
+        allow_llm_fallback=bool(payload.get("allow_llm_fallback", True)),
     )
     return build_daily_brief(business_state)
 
