@@ -41,3 +41,27 @@ Helpful deep links:
 
 - The prototype intentionally stays lightweight: no integrations, no vector DB, no autonomous actions.
 - Text files work best for extraction. Binary files are accepted for queueing but not deeply parsed in this version.
+
+## Backend ingestion
+
+The backend ingestion layer normalizes three demo source types into one shared JSON contract at [`backend/schemas/business_state.py`](/Users/dhruvverma/Documents/Projects/A1-codex/backend/schemas/business_state.py):
+
+- `customers`
+- `invoices`
+- `open_issues`
+- `commitments`
+- `sops`
+- `events`
+- `unknowns`
+- `source_map`
+
+Each nested record preserves `source_id`, and `source_map` keeps the source `source_type`, `title`, `snippet`, and `date` when one is available.
+
+Run the demo ingestion build:
+
+```bash
+cd /Users/dhruvverma/Documents/Projects/A1-codex
+python3 backend/scripts/build_demo_business_state.py
+```
+
+This writes the demo contract to [`backend/data/demo_inputs/business_state.json`](/Users/dhruvverma/Documents/Projects/A1-codex/backend/data/demo_inputs/business_state.json).
