@@ -60,12 +60,13 @@ npm install
 npm run dev
 ```
 
-If Next.js throws `Watchpack Error (watcher): EMFILE`, use polling mode instead:
+`npm run dev` now starts Next.js in polling mode by default to avoid `Watchpack Error (watcher): EMFILE` on this setup.
+
+If you want the non-polling watcher path, use:
 
 ```bash
 cd /Users/dhruvverma/Documents/Projects/A1-codex/frontend
-rm -rf .next
-npm run dev:poll
+npm run dev:fast
 ```
 
 Frontend demo deep link:
