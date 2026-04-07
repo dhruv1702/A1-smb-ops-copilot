@@ -8,6 +8,7 @@ from backend.agents.common import (
     line_for,
     preview_text,
     register_receipt,
+    source_map_entry,
     slugify,
 )
 
@@ -18,6 +19,7 @@ def run_inbox_agent(business_state: dict[str, Any]) -> dict[str, Any]:
     ops: list[dict[str, Any]] = []
     risks: list[dict[str, Any]] = []
     recommended_actions: list[dict[str, Any]] = []
+    customer_by_source = _customer_index(business_state)
 
     for document in get_documents(business_state):
         if document["kind"] != "email":
@@ -28,8 +30,9 @@ def run_inbox_agent(business_state: dict[str, Any]) -> dict[str, Any]:
         if "shipment" not in lowered and "delivery" not in lowered:
             continue
 
-        customer = "ACME Retail" if "acme retail" in lowered else "Customer"
-        contact = "Maya Patel" if "maya patel" in lowered else customer
+        customer_row = customer_by_source.get(document["id"], {})
+        customer = customer_row.get("company_name") or ("ACME Retail" if "acme retail" in lowered else "Customer")
+        contact = customer_row.get("contact_name") or ("Maya Patel" if "maya patel" in lowered else customer)
         issue_line = line_for(text, "delivery update") or line_for(text, "shipment would leave") or preview_text(text)
         deadline_line = line_for(text, "ETA today") or line_for(text, "realistic ETA today") or issue_line
         partial_line = line_for(text, "partial delivery is possible") or issue_line
@@ -118,3 +121,21 @@ def run_inbox_agent(business_state: dict[str, Any]) -> dict[str, Any]:
         "drafts": [],
         "receipts": receipts,
     }
+
+
+def _customer_index(business_state: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    index: dict[str, dict[str, Any]] = {}
+    customers = business_state.get("customers")
+    if not isinstance(customers, list):
+        return index
+    for customer in customers:
+        if not isinstance(customer, dict):
+            continue
+        source_id = customer.get("source_id")
+        if source_id:
+            source_entry = source_map_entry(business_state, source_id)
+            index[str(source_id)] = {
+                "company_name": customer.get("company_name") or source_entry.get("title"),
+                "contact_name": customer.get("contact_name"),
+            }
+    return index
