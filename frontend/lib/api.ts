@@ -83,6 +83,46 @@ export interface DailyBrief {
   agentRuns: AgentRunStatus[];
 }
 
+interface BackendBriefItem {
+  id: string;
+  title: string;
+  summary: string;
+  priority: number;
+  receipt_ids?: string[];
+  owner?: string;
+  due?: string | null;
+  status?: string;
+}
+
+interface BackendDraftItem {
+  id: string;
+  channel: string;
+  subject: string;
+  body: string;
+  tone?: string;
+  receipt_ids?: string[];
+}
+
+interface BackendReceiptItem {
+  id: string;
+  title: string;
+  source_id: string;
+  source_name: string;
+  source_type: string;
+  excerpt: string;
+}
+
+interface BackendDailyBrief {
+  executive_summary: string[];
+  ops: BackendBriefItem[];
+  finance: BackendBriefItem[];
+  customer_comms: BackendBriefItem[];
+  risks: BackendBriefItem[];
+  recommended_actions: BackendBriefItem[];
+  drafts: BackendDraftItem[];
+  receipts: BackendReceiptItem[];
+}
+
 const mockDailyBrief: DailyBrief = {
   briefDate: "April 7, 2026",
   reportTitle: "Daily operating brief",
@@ -367,10 +407,182 @@ interface FetchDailyBriefOptions {
   useMock?: boolean;
 }
 
+function isFrontendDailyBrief(payload: unknown): payload is DailyBrief {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  return (
+    "cards" in payload &&
+    "recommendedActions" in payload &&
+    "executiveSummary" in payload
+  );
+}
+
+function isBackendDailyBrief(payload: unknown): payload is BackendDailyBrief {
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+  return (
+    "executive_summary" in payload &&
+    "recommended_actions" in payload &&
+    "receipts" in payload
+  );
+}
+
+function mapPriority(priority: number): "high" | "medium" | "low" {
+  if (priority <= 1) {
+    return "high";
+  }
+  if (priority === 2) {
+    return "medium";
+  }
+  return "low";
+}
+
+function toTitleCase(value: string): string {
+  return value
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function mapSectionItem(item: BackendBriefItem): BriefSectionItem {
+  const tags = [item.owner, item.due ?? undefined, `Priority ${item.priority}`]
+    .filter(Boolean)
+    .map((tag) => String(tag));
+  return {
+    id: item.id,
+    title: item.title,
+    status: item.status ?? "Open",
+    copy: item.summary,
+    tags,
+    rationale: item.summary,
+    whyItMatters: tags.length ? tags : ["Evidence-backed recommendation"],
+    receiptIds: item.receipt_ids ?? [],
+  };
+}
+
+function mapBackendToFrontend(backendBrief: BackendDailyBrief): DailyBrief {
+  const topAction = backendBrief.recommended_actions[0];
+  const topRisk = backendBrief.risks[0];
+  const topCash = backendBrief.finance[0];
+
+  const keyPoints = [
+    {
+      label: "Top customer issue",
+      value: topRisk?.title ?? "No critical customer issue",
+      detail: topRisk?.summary ?? "No escalation-level customer risk found.",
+    },
+    {
+      label: "Cash exposure",
+      value: topCash?.title ?? "No overdue invoices surfaced",
+      detail: topCash?.summary ?? "No active collections follow-up detected.",
+    },
+    {
+      label: "Prepared drafts",
+      value: `${backendBrief.drafts.length} drafts ready`,
+      detail:
+        backendBrief.drafts.length > 0
+          ? "Drafts are generated for human review before sending."
+          : "No communication drafts generated from current state.",
+    },
+  ];
+
+  return {
+    briefDate: new Date().toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
+    reportTitle: "Daily operating brief",
+    executiveSummary: {
+      headline:
+        backendBrief.executive_summary[0] ??
+        topAction?.title ??
+        "No high-priority recommendations from current inputs.",
+      body:
+        backendBrief.executive_summary.join(" ") ||
+        "Recommendations are generated from ingestion and specialist-agent analysis.",
+      keyPoints,
+    },
+    cards: {
+      ops: {
+        label: "Ops",
+        title: "Operational follow-up",
+        subtitle: "Time-bound work that should be reviewed and handled today.",
+        items: backendBrief.ops.map(mapSectionItem),
+      },
+      finance: {
+        label: "Finance",
+        title: "Cash and collections",
+        subtitle: "Items that affect receivables and short-term cash timing.",
+        items: backendBrief.finance.map(mapSectionItem),
+      },
+      comms: {
+        label: "Customer Comms",
+        title: "Prepared communications",
+        subtitle: "Drafted messages grounded in the compiled business state.",
+        items: backendBrief.customer_comms.map(mapSectionItem),
+      },
+      risks: {
+        label: "Risks",
+        title: "Risks to monitor",
+        subtitle: "Exposure surfaced by the current inputs and suggested work.",
+        items: backendBrief.risks.map(mapSectionItem),
+      },
+    },
+    recommendedActions: backendBrief.recommended_actions.map((action) => ({
+      id: action.id,
+      title: action.title,
+      priority: mapPriority(action.priority),
+      status: action.status ?? "Suggested next action",
+      owner: action.owner ?? "Owner",
+      requiresReview: true,
+      rationale: action.summary,
+      whyItMatters: [
+        action.due ? `Due: ${action.due}` : "No hard deadline specified",
+        `Priority score: ${action.priority}`,
+      ],
+      receiptIds: action.receipt_ids ?? [],
+    })),
+    drafts: backendBrief.drafts.map((draft) => ({
+      id: draft.id,
+      title: draft.subject,
+      channel: toTitleCase(draft.channel),
+      reviewStatus: "Prepared draft",
+      summary: draft.tone
+        ? `Tone: ${draft.tone}`
+        : "Generated from linked action and evidence receipts.",
+      body: draft.body,
+      sourceLabels: (draft.receipt_ids ?? []).slice(0, 3),
+    })),
+    receipts: backendBrief.receipts.map((receipt) => ({
+      id: receipt.id,
+      title: receipt.title,
+      kind: toTitleCase(receipt.source_type),
+      sourceName: receipt.source_name,
+      reference: receipt.source_id,
+      summary: receipt.excerpt,
+      excerpt: receipt.excerpt,
+    })),
+    proposedUpdates: [],
+    agentRuns: [
+      { id: "agent-inbox", label: "Inbox Agent complete", status: "complete" },
+      { id: "agent-finance", label: "Finance Agent complete", status: "complete" },
+      {
+        id: "agent-crm",
+        label: "Customer Relations Agent complete",
+        status: "complete",
+      },
+    ],
+  };
+}
+
 export async function fetchDailyBrief(
   options: FetchDailyBriefOptions = {},
 ): Promise<DailyBrief> {
-  const endpoint = options.endpoint ?? process.env.NEXT_PUBLIC_DAILY_BRIEF_URL;
+  const endpoint = options.endpoint ?? process.env.NEXT_PUBLIC_DAILY_BRIEF_URL ?? "/api/daily-brief";
   const useMock = options.useMock ?? !endpoint;
 
   if (useMock) {
@@ -395,5 +607,12 @@ export async function fetchDailyBrief(
     throw new Error(`Daily brief request failed with status ${response.status}`);
   }
 
-  return (await response.json()) as DailyBrief;
+  const payload = (await response.json()) as unknown;
+  if (isFrontendDailyBrief(payload)) {
+    return payload;
+  }
+  if (isBackendDailyBrief(payload)) {
+    return mapBackendToFrontend(payload);
+  }
+  throw new Error("Daily brief response did not match frontend or backend contract.");
 }
