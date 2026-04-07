@@ -1,0 +1,127 @@
+{
+  "customers": [
+    {
+      "source_id": "email_acme_shipment_delay",
+      "company_name": "ACME Retail",
+      "contact_name": "Maya Patel",
+      "contact_email": "maya@acme-retail.com",
+      "status": "waiting"
+    }
+  ],
+  "invoices": [
+    {
+      "source_id": "invoice_1042_bluebird",
+      "company_name": "Bluebird Home",
+      "invoice_number": "1042",
+      "amount": 4860.0,
+      "currency": "USD",
+      "due_date": "2026-03-26",
+      "status": "overdue"
+    }
+  ],
+  "open_issues": [
+    {
+      "source_id": "email_acme_shipment_delay",
+      "company_name": "ACME Retail",
+      "issue_type": "shipment_delay",
+      "status": "waiting",
+      "summary": "ACME Retail is waiting on an update for PO-7781."
+    },
+    {
+      "source_id": "invoice_1042_bluebird",
+      "company_name": "Bluebird Home",
+      "issue_type": "invoice_collection",
+      "status": "overdue",
+      "summary": "Invoice #1042 for Bluebird Home is overdue by 12 days ($4860.00)."
+    }
+  ],
+  "commitments": [
+    {
+      "source_id": "note_founder_fulfillment",
+      "commitment": "email the customer the same day with a revised ETA and offer a partial ship if stock is split",
+      "trigger": "any outbound shipment slips by more than 48 hours",
+      "due_hint": "same day"
+    },
+    {
+      "source_id": "note_founder_fulfillment",
+      "commitment": "Call Northline supplier before 11:00",
+      "trigger": "stock is missing from the Tuesday truck",
+      "due_hint": "before 11:00"
+    },
+    {
+      "source_id": "note_founder_fulfillment",
+      "commitment": "first reminder at 7 overdue days, second reminder at 14 overdue days",
+      "trigger": "Payment reminder cadence",
+      "due_hint": "7 overdue days; 14 overdue days"
+    },
+    {
+      "source_id": "note_founder_fulfillment",
+      "commitment": "be direct and give a date, not 'soon'",
+      "trigger": "ACME account is sensitive after the February packaging mistake",
+      "due_hint": null
+    }
+  ],
+  "sops": [
+    {
+      "source_id": "note_founder_fulfillment",
+      "title": "Fulfillment note - founder desk",
+      "summary": "If any outbound shipment slips by more than 48 hours, email the customer the same day with a revised ETA and offer a partial ship if stock is split."
+    },
+    {
+      "source_id": "note_founder_fulfillment",
+      "title": "Fulfillment note - founder desk",
+      "summary": "Call Northline supplier before 11:00 if stock is missing from the Tuesday truck."
+    },
+    {
+      "source_id": "note_founder_fulfillment",
+      "title": "Fulfillment note - founder desk",
+      "summary": "Payment reminder cadence: first reminder at 7 overdue days, second reminder at 14 overdue days."
+    },
+    {
+      "source_id": "note_founder_fulfillment",
+      "title": "Fulfillment note - founder desk",
+      "summary": "ACME account is sensitive after the February packaging mistake; be direct and give a date, not 'soon'."
+    }
+  ],
+  "events": [
+    {
+      "source_id": "email_acme_shipment_delay",
+      "event_type": "email_received",
+      "title": "Customer email received",
+      "event_date": "2026-04-07"
+    },
+    {
+      "source_id": "invoice_1042_bluebird",
+      "event_type": "invoice_issued",
+      "title": "Invoice issued",
+      "event_date": "2026-03-12"
+    },
+    {
+      "source_id": "invoice_1042_bluebird",
+      "event_type": "invoice_due",
+      "title": "Invoice due date",
+      "event_date": "2026-03-26"
+    }
+  ],
+  "unknowns": [],
+  "source_map": {
+    "email_acme_shipment_delay": {
+      "source_type": "email",
+      "title": "Re: ACME spring launch order - shipment update?",
+      "snippet": "Hi team, We still do not have a delivery update for PO-7781. Your team said the shipment would leave last Thursday, but our store launch is on Friday and we need a realistic ETA today. If the shipment slipped, please...",
+      "date": "2026-04-07"
+    },
+    "invoice_1042_bluebird": {
+      "source_type": "invoice",
+      "title": "Invoice #1042",
+      "snippet": "Invoice #1042 Customer: Bluebird Home Issue Date: 2026-03-12 Due Date: 2026-03-26 Amount Due: $4,860 Status: Unpaid Notes: Net 14. Reminder not yet sent.",
+      "date": "2026-03-12"
+    },
+    "note_founder_fulfillment": {
+      "source_type": "note",
+      "title": "Fulfillment note - founder desk",
+      "snippet": "If any outbound shipment slips by more than 48 hours, email the customer the same day with a revised ETA and offer a partial ship if stock is split.",
+      "date": null
+    }
+  }
+}
