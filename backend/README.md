@@ -55,6 +55,13 @@ cd /Users/dhruvverma/Documents/Projects/A1-codex
 python3 backend/scripts/build_demo_bundle.py
 ```
 
+Build a `daily_brief` from inline text inputs:
+
+```bash
+cd /Users/dhruvverma/Documents/Projects/A1-codex
+python3 backend/scripts/build_daily_brief_from_inputs.py /path/to/input.json /tmp/daily_brief.json
+```
+
 Run backend ingestion tests:
 
 ```bash

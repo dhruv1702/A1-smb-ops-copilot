@@ -64,6 +64,11 @@ Frontend demo deep link:
 
 - `http://127.0.0.1:3000/?demo=1&run=1`
 
+Frontend intake modes:
+
+- `GET /api/daily-brief` rebuilds the fixed demo brief from the backend demo fixtures.
+- `POST /api/daily-brief` accepts uploaded text files, pasted text, and voice transcript text, then runs the Python ingestion + agent pipeline on those live inputs.
+
 ## Notes
 
 - The prototype intentionally stays lightweight: no integrations, no vector DB, no autonomous actions.
@@ -98,6 +103,13 @@ Run backend ingestion tests:
 ```bash
 cd /Users/dhruvverma/Documents/Projects/A1-codex
 python3 -m unittest discover -s backend/tests
+```
+
+Build a brief directly from inline text inputs:
+
+```bash
+cd /Users/dhruvverma/Documents/Projects/A1-codex
+python3 backend/scripts/build_daily_brief_from_inputs.py /path/to/input.json /tmp/daily_brief.json
 ```
 
 Team handoff and contract rules live in [`backend/README.md`](/Users/dhruvverma/Documents/Projects/A1-codex/backend/README.md).

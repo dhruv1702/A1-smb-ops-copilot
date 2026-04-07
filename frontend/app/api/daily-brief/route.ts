@@ -24,25 +24,68 @@ function findRepoRoot(): string {
   throw new Error("Could not locate repository root with backend runner.");
 }
 
-export async function GET() {
-  try {
-    const repoRoot = findRepoRoot();
-    const python = process.env.PYTHON_BIN ?? "python3";
+function getPythonBin(): string {
+  return process.env.PYTHON_BIN ?? "python3";
+}
 
+async function readJson(pathname: string): Promise<unknown> {
+  const raw = await fs.readFile(pathname, "utf-8");
+  return JSON.parse(raw);
+}
+
+async function buildDemoBrief(): Promise<unknown> {
+  const repoRoot = findRepoRoot();
+  const python = getPythonBin();
+  const outputPath = path.join(tmpdir(), `daily_brief_${randomUUID()}.json`);
+
+  try {
     await execFileAsync(python, ["backend/scripts/build_demo_business_state.py"], {
       cwd: repoRoot,
     });
-
-    const outputPath = path.join(tmpdir(), `daily_brief_${randomUUID()}.json`);
     await execFileAsync(
       python,
       ["backend/run_daily_brief.py", "backend/data/demo_inputs/business_state.json", outputPath],
       { cwd: repoRoot },
     );
-
-    const raw = await fs.readFile(outputPath, "utf-8");
+    return await readJson(outputPath);
+  } finally {
     await fs.unlink(outputPath).catch(() => undefined);
-    return NextResponse.json(JSON.parse(raw));
+  }
+}
+
+async function buildBriefFromInputs(payload: unknown): Promise<unknown> {
+  const repoRoot = findRepoRoot();
+  const python = getPythonBin();
+  const inputPath = path.join(tmpdir(), `daily_brief_inputs_${randomUUID()}.json`);
+  const outputPath = path.join(tmpdir(), `daily_brief_${randomUUID()}.json`);
+
+  try {
+    await fs.writeFile(inputPath, JSON.stringify(payload), "utf-8");
+    await execFileAsync(
+      python,
+      ["backend/scripts/build_daily_brief_from_inputs.py", inputPath, outputPath],
+      { cwd: repoRoot },
+    );
+    return await readJson(outputPath);
+  } finally {
+    await fs.unlink(inputPath).catch(() => undefined);
+    await fs.unlink(outputPath).catch(() => undefined);
+  }
+}
+
+export async function GET() {
+  try {
+    return NextResponse.json(await buildDemoBrief());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to build daily brief.";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const payload = await request.json();
+    return NextResponse.json(await buildBriefFromInputs(payload));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to build daily brief.";
     return NextResponse.json({ error: message }, { status: 500 });

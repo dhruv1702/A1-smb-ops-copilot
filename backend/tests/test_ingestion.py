@@ -9,7 +9,12 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.ingestion.build_business_state import SourceDocument, build_business_state
+from backend.ingestion.build_business_state import (
+    SourceDocument,
+    build_business_state,
+    create_source_document,
+    infer_source_type,
+)
 from backend.ingestion.parse_email import parse_email
 from backend.ingestion.parse_invoice import parse_invoice
 from backend.ingestion.parse_note import parse_note
@@ -174,6 +179,36 @@ class BuildBusinessStateTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             build_business_state(duplicate_sources, reference_date=date(2026, 4, 7))
+
+    def test_create_source_document_infers_supported_source_types(self) -> None:
+        email_document = create_source_document(
+            source_id="email_auto",
+            title="Customer email",
+            text="From: Maya Patel <maya@acme-retail.com>\nSubject: Shipment update\n\nWe are still waiting.",
+        )
+        invoice_document = create_source_document(
+            source_id="invoice_auto",
+            title="Invoice #1042 extracted text",
+            text="Invoice #1042\nAmount Due: $4860.00\nDue Date: 2026-03-26",
+        )
+        note_document = create_source_document(
+            source_id="note_auto",
+            title="Founder note",
+            text="- Call supplier before 11:00 if tracking is missing.\n- Send direct update same day.",
+        )
+
+        self.assertEqual(email_document.source_type, "email")
+        self.assertEqual(invoice_document.source_type, "invoice")
+        self.assertEqual(note_document.source_type, "note")
+
+    def test_infer_source_type_defaults_to_note_for_unstructured_text(self) -> None:
+        self.assertEqual(
+            infer_source_type(
+                title="Loose update",
+                text="Need to think about shipping soon and review old notes.",
+            ),
+            "note",
+        )
 
 
 if __name__ == "__main__":

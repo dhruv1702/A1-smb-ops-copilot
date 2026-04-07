@@ -63,6 +63,13 @@ export interface AgentRunStatus {
   status: "complete" | "pending";
 }
 
+export interface DailyBriefInput {
+  sourceId: string;
+  title: string;
+  text: string;
+  sourceType?: "email" | "invoice" | "note";
+}
+
 export interface DailyBrief {
   briefDate: string;
   reportTitle: string;
@@ -128,6 +135,7 @@ interface BackendDailyBrief {
 interface FetchDailyBriefOptions {
   endpoint?: string;
   useMock?: boolean;
+  inputs?: DailyBriefInput[];
 }
 
 const DEFAULT_API_ENDPOINT = "/api/daily-brief";
@@ -167,10 +175,14 @@ const SECTION_CONFIG: Record<
 export async function fetchDailyBrief(
   options: FetchDailyBriefOptions = {},
 ): Promise<DailyBrief> {
+  const requestInputs = (options.inputs ?? []).filter((input) => input.text.trim().length > 0);
   const configuredEndpoint = options.endpoint ?? process.env.NEXT_PUBLIC_DAILY_BRIEF_URL;
   const preferredEndpoint = options.useMock ? DEFAULT_DEMO_ENDPOINT : configuredEndpoint ?? DEFAULT_API_ENDPOINT;
   const endpointsToTry =
-    !options.useMock && !configuredEndpoint && preferredEndpoint === DEFAULT_API_ENDPOINT
+    requestInputs.length === 0 &&
+    !options.useMock &&
+    !configuredEndpoint &&
+    preferredEndpoint === DEFAULT_API_ENDPOINT
       ? [DEFAULT_API_ENDPOINT, DEFAULT_DEMO_ENDPOINT]
       : [preferredEndpoint];
 
@@ -178,13 +190,34 @@ export async function fetchDailyBrief(
 
   for (const endpoint of endpointsToTry) {
     try {
-      const response = await fetch(endpoint, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-        },
-        cache: "no-store",
-      });
+      const response = await fetch(
+        endpoint,
+        requestInputs.length > 0
+          ? {
+              method: "POST",
+              headers: {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                reference_date: DEMO_REFERENCE_DATE,
+                inputs: requestInputs.map((input) => ({
+                  source_id: input.sourceId,
+                  title: input.title,
+                  text: input.text,
+                  source_type: input.sourceType,
+                })),
+              }),
+              cache: "no-store",
+            }
+          : {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+              },
+              cache: "no-store",
+            },
+      );
 
       if (!response.ok) {
         throw new Error(`Daily brief request failed with status ${response.status}`);

@@ -6,6 +6,7 @@ import { DraftPanel } from "@/components/DraftPanel";
 import { ReceiptPanel } from "@/components/ReceiptPanel";
 import { QueuedInputFile, UploadBox } from "@/components/UploadBox";
 import {
+  DailyBriefInput,
   BriefSectionItem,
   DailyBrief,
   RecommendedAction,
@@ -39,18 +40,53 @@ export default function Page() {
   const [queuedFiles, setQueuedFiles] = useState<QueuedInputFile[]>([]);
   const [pastedText, setPastedText] = useState("");
   const [voiceTranscript, setVoiceTranscript] = useState("");
+  const [isDemoMode, setIsDemoMode] = useState(false);
   const [brief, setBrief] = useState<DailyBrief | null>(null);
   const [selectedInsight, setSelectedInsight] = useState<SelectableInsight | null>(null);
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [askValue, setAskValue] = useState("");
 
-  const runBrief = async () => {
+  const buildLiveInputs = (): DailyBriefInput[] => {
+    const fileInputs = queuedFiles
+      .filter((file) => file.text && file.text.trim().length > 0)
+      .map((file) => ({
+        sourceId: file.id,
+        title: file.name,
+        text: file.text ?? "",
+      }));
+
+    const textInputs: DailyBriefInput[] = [];
+
+    if (pastedText.trim()) {
+      textInputs.push({
+        sourceId: "pasted-note",
+        title: "Pasted operating note",
+        text: pastedText.trim(),
+      });
+    }
+
+    if (voiceTranscript.trim()) {
+      textInputs.push({
+        sourceId: "voice-note",
+        title: "Voice note transcript",
+        text: voiceTranscript.trim(),
+      });
+    }
+
+    return [...fileInputs, ...textInputs];
+  };
+
+  const runBrief = async (options?: { useMock?: boolean }) => {
     setIsRunning(true);
     setError(null);
 
     try {
-      const nextBrief = await fetchDailyBrief();
+      const nextBrief = await fetchDailyBrief(
+        options?.useMock || isDemoMode
+          ? { useMock: true }
+          : { inputs: buildLiveInputs() },
+      );
       setBrief(nextBrief);
       setSelectedInsight(nextBrief.recommendedActions[0] ?? nextBrief.cards.ops.items[0] ?? null);
     } catch (runError) {
@@ -64,6 +100,22 @@ export default function Page() {
     setQueuedFiles(demoFiles);
     setPastedText(demoPasteText);
     setVoiceTranscript("Please summarize what needs review today and show why each recommendation was made.");
+    setIsDemoMode(true);
+  };
+
+  const handleFilesChange = (files: QueuedInputFile[]) => {
+    setQueuedFiles(files);
+    setIsDemoMode(false);
+  };
+
+  const handlePastedTextChange = (value: string) => {
+    setPastedText(value);
+    setIsDemoMode(false);
+  };
+
+  const handleVoiceTranscriptChange = (value: string) => {
+    setVoiceTranscript(value);
+    setIsDemoMode(false);
   };
 
   useEffect(() => {
@@ -80,7 +132,7 @@ export default function Page() {
     handleLoadDemo();
 
     if (searchParams.has("run") || searchParams.has("compiled")) {
-      void runBrief();
+      void runBrief({ useMock: true });
     }
   }, []);
 
@@ -237,9 +289,9 @@ export default function Page() {
             queuedFiles={queuedFiles}
             pastedText={pastedText}
             voiceTranscript={voiceTranscript}
-            onFilesChange={setQueuedFiles}
-            onPastedTextChange={setPastedText}
-            onVoiceTranscriptChange={setVoiceTranscript}
+            onFilesChange={handleFilesChange}
+            onPastedTextChange={handlePastedTextChange}
+            onVoiceTranscriptChange={handleVoiceTranscriptChange}
             onRun={runBrief}
             onLoadDemo={handleLoadDemo}
             isRunning={isRunning}

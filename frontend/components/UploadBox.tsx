@@ -32,6 +32,9 @@ export interface QueuedInputFile {
   id: string;
   name: string;
   sizeLabel: string;
+  text?: string;
+  mimeType?: string;
+  isDemo?: boolean;
 }
 
 interface UploadBoxProps {
@@ -75,12 +78,16 @@ export function UploadBox({
 
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
-  const addFiles = (incomingFiles: FileList | File[]) => {
-    const nextFiles = Array.from(incomingFiles).map((file, index) => ({
-      id: `${file.name}-${file.lastModified}-${index}`,
-      name: file.name,
-      sizeLabel: formatFileSize(file.size),
-    }));
+  const addFiles = async (incomingFiles: FileList | File[]) => {
+    const nextFiles = await Promise.all(
+      Array.from(incomingFiles).map(async (file, index) => ({
+        id: `${file.name}-${file.lastModified}-${index}`,
+        name: file.name,
+        sizeLabel: formatFileSize(file.size),
+        text: await file.text(),
+        mimeType: file.type || "text/plain",
+      })),
+    );
 
     onFilesChange(nextFiles);
   };
@@ -170,7 +177,7 @@ export function UploadBox({
             event.preventDefault();
             setIsDragging(false);
             if (event.dataTransfer.files.length > 0) {
-              addFiles(event.dataTransfer.files);
+              void addFiles(event.dataTransfer.files);
             }
           }}
         >
@@ -181,7 +188,7 @@ export function UploadBox({
             multiple
             onChange={(event) => {
               if (event.target.files) {
-                addFiles(event.target.files);
+                void addFiles(event.target.files);
               }
             }}
           />
