@@ -1,0 +1,24 @@
+{
+  "business_name": "A1 Demo Co",
+  "reference_date": "2026-04-07",
+  "documents": [
+    {
+      "id": "doc-email-acme",
+      "name": "acme-shipment-delay-email.txt",
+      "origin": "demo",
+      "text": "Subject: Re: ACME spring launch order - shipment update?\nFrom: Maya Patel <maya@acme-retail.com>\nReceived: 2026-04-07 08:14 SGT\n\nHi team,\nWe still do not have a delivery update for PO-7781. Your team said the shipment would leave last Thursday, but our store launch is on Friday and we need a realistic ETA today.\nIf the shipment slipped, please tell us plainly and let us know whether a partial delivery is possible.\n\nThanks,\nMaya Patel\nOperations Manager, ACME Retail"
+    },
+    {
+      "id": "doc-invoice-1042",
+      "name": "invoice-1042.txt",
+      "origin": "demo",
+      "text": "Invoice #1042\nCustomer: Bluebird Home\nIssue Date: 2026-03-12\nDue Date: 2026-03-26\nAmount Due: $4,860\nStatus: Unpaid\nNotes: Net 14. Reminder not yet sent."
+    },
+    {
+      "id": "doc-founder-note",
+      "name": "founder-fulfillment-note.md",
+      "origin": "demo",
+      "text": "Fulfillment note - founder desk\n\n- If any outbound shipment slips by more than 48 hours, email the customer the same day with a revised ETA and offer a partial ship if stock is split.\n- Call Northline supplier before 11:00 if stock is missing from the Tuesday truck.\n- Payment reminder cadence: first reminder at 7 overdue days, second reminder at 14 overdue days.\n- ACME account is sensitive after the February packaging mistake; be direct and give a date, not 'soon'."
+    }
+  ]
+}
